@@ -26,9 +26,9 @@ from student.roles import (
     GlobalStaff, CourseStaffRole, CourseInstructorRole,
     OrgStaffRole, OrgInstructorRole, CourseBetaTesterRole
 )
-from student.models import CourseEnrollment, CourseEnrollmentAllowed
+from student.models import CourseEnrollment, CourseEnrollmentAllowed, EntranceExamConfiguration
 from opaque_keys.edx.keys import CourseKey, UsageKey
-from util.milestones_helpers import get_pre_requisite_courses_not_completed
+from util.milestones_helpers import get_pre_requisite_courses_not_completed, get_required_content
 DEBUG_ACCESS = False
 
 log = logging.getLogger(__name__)
@@ -279,9 +279,29 @@ def _has_access_course_desc(user, action, course):
         else:
             return True
 
+    def can_view_courseware_with_entrance_exam():  # pylint: disable=invalid-name
+        """
+        Checks if entrance exam feature is enabled and course has entrance exam
+        and user is neither staff nor allowed to skip entrance exam
+        then it returns False if user has not passed entrance exam
+        otherwise returns True. In case of anonymous user returns False also.
+        """
+        if user.is_anonymous():
+            return False
+
+        if settings.FEATURES.get('ENTRANCE_EXAMS') \
+                and getattr(course, 'entrance_exam_enabled', False) \
+                and not _has_staff_access_to_descriptor(user, course, course.id) \
+                and not EntranceExamConfiguration.user_can_skip_entrance_exam(user, course.id) \
+                and get_required_content(course, user):
+            return False
+        else:
+            return True
+
     checkers = {
         'load': can_load,
         'view_courseware_with_prerequisites': can_view_courseware_with_prerequisites,
+        'view_courseware_with_entrance_exam': can_view_courseware_with_entrance_exam,
         'load_forum': can_load_forum,
         'load_mobile': can_load_mobile,
         'load_mobile_no_enrollment_check': can_load_mobile_no_enroll_check,

@@ -6,7 +6,7 @@ Utility library for working with the edx-milestones app
 from django.conf import settings
 from django.utils.translation import ugettext as _
 from opaque_keys import InvalidKeyError
-from opaque_keys.edx.keys import CourseKey
+from opaque_keys.edx.keys import CourseKey, UsageKey
 
 from courseware.models import StudentModule
 from xmodule.modulestore.django import modulestore
@@ -22,7 +22,6 @@ from milestones.api import (
 )
 from milestones.models import MilestoneRelationshipType
 from milestones.exceptions import InvalidMilestoneRelationshipTypeException
-from opaque_keys.edx.keys import UsageKey
 
 NAMESPACE_CHOICES = {
     'ENTRANCE_EXAM': 'entrance_exams'
@@ -175,16 +174,20 @@ def get_required_content(course, user):
                 for content in milestone_path['content']:
                     required_content.append(content)
 
-    #local imports to avoid circular reference
+    # local imports to avoid circular reference
     from student.models import EntranceExamConfiguration
+    from courseware.access import has_access
     can_skip_entrance_exam = EntranceExamConfiguration.user_can_skip_entrance_exam(user, course.id)
-    # check if required_content has any entrance exam and user is allowed to skip it
+    # check if required_content has any entrance exam
+    # and user is allowed to skip it or user is member of staff
     # then remove it from required content
-    if required_content and getattr(course, 'entrance_exam_enabled', False) and can_skip_entrance_exam:
+    if required_content and getattr(course, 'entrance_exam_enabled', False) and \
+            (can_skip_entrance_exam or has_access(user, 'staff', course, course.id)):
         descriptors = [modulestore().get_item(UsageKey.from_string(content)) for content in required_content]
         entrance_exam_contents = [unicode(descriptor.location)
                                   for descriptor in descriptors if descriptor.is_entrance_exam]
         required_content = list(set(required_content) - set(entrance_exam_contents))
+
     return required_content
 
 

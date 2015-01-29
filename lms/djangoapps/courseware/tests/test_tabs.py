@@ -10,7 +10,7 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from courseware.courses import get_course_by_id
 from courseware.tests.helpers import get_request_for_user, LoginEnrollmentTestCase
-from courseware.tests.factories import InstructorFactory
+from courseware.tests.factories import InstructorFactory, StaffFactory
 from xmodule import tabs
 from xmodule.modulestore.tests.django_utils import (
     TEST_DATA_MIXED_TOY_MODULESTORE, TEST_DATA_MIXED_CLOSED_MODULESTORE
@@ -158,6 +158,7 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
                 'namespace': '{}.entrance_exams'.format(unicode(self.course.id)),
                 'description': 'Testing Courseware Tabs'
             }
+            self.user.is_staff = False
             self.course.entrance_exam_enabled = True
             self.course.entrance_exam_id = unicode(entrance_exam.location)
             milestone = milestones_api.add_milestone(milestone)
@@ -173,10 +174,9 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
                 milestone
             )
             course_tab_list = get_course_tab_list(self.course, self.user)
-            self.assertEqual(len(course_tab_list), 2)
+            self.assertEqual(len(course_tab_list), 1)
             self.assertEqual(course_tab_list[0]['tab_id'], 'courseware')
             self.assertEqual(course_tab_list[0]['name'], 'Entrance Exam')
-            self.assertEqual(course_tab_list[1]['tab_id'], 'instructor')
 
         def test_get_course_tabs_list_skipped_entrance_exam(self):
             """
@@ -199,6 +199,19 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
             self.client.logout()
             self.login(self.email, self.password)
             course_tab_list = get_course_tab_list(self.course, self.user)
+            self.assertEqual(len(course_tab_list), 5)
+
+        def test_course_tabs_list_for_staff_members(self):
+            """
+            Tests tab list is not limited if user is member of staff
+            and has not passed entrance exam.
+            """
+            # Login as member of staff
+            self.client.logout()
+            staff_user = StaffFactory(course_key=self.course.id)
+            self.client.login(username=staff_user.username, password='test')
+
+            course_tab_list = get_course_tab_list(self.course, staff_user)
             self.assertEqual(len(course_tab_list), 5)
 
 
