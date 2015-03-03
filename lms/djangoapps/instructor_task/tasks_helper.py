@@ -760,7 +760,7 @@ def cohort_students_and_upload(_xmodule_instance_args, _entry_id, course_id, tas
     return task_progress.update_task_state(extra_meta=current_step)
 
 
-def push_student_responses_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input, action_name):
+def push_student_responses_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input, _action_name):
     """
     For a given `course_id`, generate a responses CSV file for students that
     have submitted problem responses, and store using a `ReportStore`. Once

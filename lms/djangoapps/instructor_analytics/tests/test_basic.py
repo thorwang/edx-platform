@@ -376,11 +376,15 @@ class TestCourseRegistrationCodeAnalyticsBasic(ModuleStoreTestCase):
 @override_settings(MODULESTORE=TEST_DATA_XML_MODULESTORE)
 class TestStudentSubmissionsAnalyticsBasic(ModuleStoreTestCase):
     """ Test basic student responses analytics function. """
+    # pylint: disable=attribute-defined-outside-init
+
     def load_course(self, course_id):
+        """Loads the given `course_id` into self.course"""
         course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
         self.course = get_course(course_key)
 
     def create_student(self):
+        """Creates a new user and enrolls it in self.course"""
         self.student = UserFactory()
         CourseEnrollment.enroll(self.student, self.course.id)
 
@@ -411,5 +415,5 @@ class TestStudentSubmissionsAnalyticsBasic(ModuleStoreTestCase):
         )
 
         datarows = list(student_responses(self.course))
-        #Invalid module state response will be skipped, so datarows should be empty
+        # Invalid module state response will be skipped, so datarows should be empty
         self.assertEqual(len(datarows), 0)
