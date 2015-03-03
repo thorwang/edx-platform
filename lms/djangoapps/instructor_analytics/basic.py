@@ -353,7 +353,9 @@ def dump_grading_context(course):
 
 
 def iterate_problem_components(course):
-    """ Helper function for iterating through all problems of a course """
+    """
+    Python generator for iterating through all problems of a course.
+    """
     for section in course.get_children():
         section_name = section.display_name_with_default
         for subsection in section.get_children():
@@ -371,6 +373,8 @@ def student_responses(course):
     """
     Yields student responses for all problems in course for writing out to a CSV file.
     """
+    # `order` is for the corresponding "order" column in the CSV for problem
+    # order in the course, so instructors could sort by it.
     order = 1
     for problem_component, parent_metadata in iterate_problem_components(course):
         problem_component_info = (parent_metadata +
@@ -380,7 +384,9 @@ def student_responses(course):
             grade__isnull=False,
             module_state_key=problem_component.location,
         ).order_by('student__username')
+        # Check if this particular problem_component has any student responses (i.e. modules with non-null grade)
         if modules:
+            # Default: we have not retrieved an answer for the current problem
             has_answer = False
             for module in modules:
                 try:
@@ -388,12 +394,12 @@ def student_responses(course):
                     raw_answers = state_dict.get("student_answers", {})
                 except ValueError:
                     log.error(
-                        "Student responses: Could not parse module state for " +
-                        "StudentModule id={module_id}, course={course_id}".format(
-                            module_id=module.id, course_id=course.id
-                        )
+                        "Student responses: Could not parse module state for StudentModule id=%s, course=%s",
+                        module.id,
+                        course.id
                     )
                     continue
+
                 pretty_answers = u', '.join(
                     u"{problem}={answer}".format(problem=problem, answer=answer)
                     for (problem, answer) in raw_answers.items()
@@ -401,6 +407,8 @@ def student_responses(course):
                 yield problem_component_info + [module.student.username, pretty_answers]
                 if not has_answer:
                     has_answer = True
+            # Barring no errors up to this point, this problem has yielded at least one response,
+            # so we need to increment the order variable for the next problem.
             if has_answer:
                 order += 1
 

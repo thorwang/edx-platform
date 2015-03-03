@@ -117,7 +117,7 @@ class DataDownload
           if e.target.name == 'calculate-grades-csv'
             @$reports_request_response_error.text gettext("Error generating grades. Please try again.")
           else
-            @$reports_request_response_error.text gettext("Error getting student responses. Please try again.")
+            @$reports_request_response_error.text gettext("Error generating student responses. Please try again.")
           $(".msg-error").css({"display":"block"})
         success: (data) =>
           @$reports_request_response.text data['status']

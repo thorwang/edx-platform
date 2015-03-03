@@ -565,7 +565,7 @@ class TestResponsesReport(TestReportMixin, ModuleStoreTestCase):
         self.course = get_course(course_key)
         self.problem_location = Location("edX", "unicode_graded", "2012_Fall", "problem", "H1P1")
 
-        self.student = UserFactory(username=u'student\xec')
+        self.student = UserFactory(username=u"🅂🅃🅄🄳🄴🄽🅃")
         CourseEnrollmentFactory.create(user=self.student, course_id=self.course.id)
 
         StudentModuleFactory.create(
@@ -573,7 +573,7 @@ class TestResponsesReport(TestReportMixin, ModuleStoreTestCase):
             module_state_key=self.problem_location,
             student=self.student,
             grade=0,
-            state=u'{"student_answers":{"fake-problem":"caf\xe9"}}',
+            state=u'{"student_answers":{"fake-problem":"ƒαкє"}}',
         )
 
         result = push_student_responses_to_s3(None, None, self.course.id, None, 'generated')
