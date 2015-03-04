@@ -6,7 +6,6 @@ import json
 from student.models import CourseEnrollment
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.test.utils import override_settings
 from mock import patch
 from student.roles import CourseSalesAdminRole
 from student.tests.factories import UserFactory, CourseModeFactory
@@ -21,17 +20,14 @@ from instructor_analytics.basic import (
     coupon_codes_features, student_responses, AVAILABLE_FEATURES, STUDENT_FEATURES, PROFILE_FEATURES
 )
 from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
-from courseware.courses import get_course
+from courseware.courses import get_course_by_id
 from courseware.tests.factories import StudentModuleFactory, InstructorFactory
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, xml_store_config
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, mixed_store_config
 from xmodule.modulestore.tests.factories import CourseFactory
 
 import datetime
 from django.db.models import Q
 import pytz
-
-TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
-TEST_DATA_XML_MODULESTORE = xml_store_config(TEST_DATA_DIR, course_dirs=['simple', 'graded', 'unicode_graded'])
 
 
 class TestAnalyticsBasic(ModuleStoreTestCase):
@@ -373,15 +369,24 @@ class TestCourseRegistrationCodeAnalyticsBasic(ModuleStoreTestCase):
             )
 
 
-@override_settings(MODULESTORE=TEST_DATA_XML_MODULESTORE)
+TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
+
+TEST_DATA_MODULESTORE = mixed_store_config(
+    TEST_DATA_DIR,
+    {
+        'edX/graded/2012_Fall': 'xml',
+        'edX/simple/2012_Fall': 'xml',
+    },
+    include_xml=True,
+    xml_course_dirs=['graded', 'simple']
+)
+
+
 class TestStudentSubmissionsAnalyticsBasic(ModuleStoreTestCase):
     """ Test basic student responses analytics function. """
     # pylint: disable=attribute-defined-outside-init
 
-    def load_course(self, course_id):
-        """Loads the given `course_id` into self.course"""
-        course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-        self.course = get_course(course_key)
+    MODULESTORE = TEST_DATA_MODULESTORE
 
     def create_student(self):
         """Creates a new user and enrolls it in self.course"""
@@ -396,13 +401,15 @@ class TestStudentSubmissionsAnalyticsBasic(ModuleStoreTestCase):
         self.assertEqual(datarows, [])
 
     def test_full_course_no_students(self):
-        self.load_course('edX/simple/2012_Fall')
+        course_key = SlashSeparatedCourseKey('edX', 'simple', '2012_Fall')
+        self.course = get_course_by_id(course_key)
 
         datarows = list(student_responses(self.course))
         self.assertEqual(datarows, [])
 
     def test_invalid_module_state(self):
-        self.load_course('edX/graded/2012_Fall')
+        course_key = SlashSeparatedCourseKey('edX', 'graded', '2012_Fall')
+        self.course = get_course_by_id(course_key)
         self.problem_location = Location("edX", "graded", "2012_Fall", "problem", "H1P2")
 
         self.create_student()

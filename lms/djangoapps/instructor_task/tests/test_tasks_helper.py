@@ -8,20 +8,18 @@ Tests that CSV grade report generation works with unicode emails.
 """
 import ddt
 from django.conf import settings
-from django.test.utils import override_settings
 from mock import Mock, patch
 import tempfile
 import unicodecsv
 
-from courseware.courses import get_course
+from courseware.courses import get_course_by_id
 from courseware.tests.factories import StudentModuleFactory
-from opaque_keys.edx.keys import CourseKey
-from opaque_keys.edx.locations import Location
+from opaque_keys.edx.locations import Location, SlashSeparatedCourseKey
 from student.tests.factories import CourseEnrollmentFactory, UserFactory
 from student.models import CourseEnrollment
 from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.partitions.partitions import Group, UserPartition
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, xml_store_config
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, mixed_store_config
 
 from openedx.core.djangoapps.course_groups.models import CourseUserGroupPartitionGroup
 from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
@@ -35,9 +33,6 @@ from instructor_task.tasks_helper import (
     push_student_responses_to_s3,
 )
 from instructor_task.tests.test_base import InstructorTaskCourseTestCase, TestReportMixin
-
-TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
-TEST_DATA_XML_MODULESTORE = xml_store_config(TEST_DATA_DIR, course_dirs=['unicode_graded'])
 
 
 @ddt.ddt
@@ -555,15 +550,25 @@ class TestCohortStudents(TestReportMixin, InstructorTaskCourseTestCase):
         )
 
 
-@override_settings(MODULESTORE=TEST_DATA_XML_MODULESTORE)
+TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
+TEST_DATA_MODULESTORE = mixed_store_config(
+    TEST_DATA_DIR,
+    {'edX/unicode_graded/2012_Fall': 'xml', },
+    include_xml=True,
+    xml_course_dirs=['unicode_graded']
+)
+
+
 class TestResponsesReport(TestReportMixin, ModuleStoreTestCase):
     """
     Tests that CSV student responses report generation works.
     """
+    MODULESTORE = TEST_DATA_MODULESTORE
+
     def test_unicode(self):
         # pylint: disable=attribute-defined-outside-init
-        course_key = CourseKey.from_string('edX/unicode_graded/2012_Fall')
-        self.course = get_course(course_key)
+        course_key = SlashSeparatedCourseKey('edX', 'unicode_graded', '2012_Fall')
+        self.course = get_course_by_id(course_key)
         self.problem_location = Location("edX", "unicode_graded", "2012_Fall", "problem", "H1P1")
 
         self.student = UserFactory(username=u"🅂🅃🅄🄳🄴🄽🅃")
