@@ -887,14 +887,18 @@
       }
 
       &.course-status-processing {
-
+        background-color: $gray-l5;
+        border: 0;
       }
 
       &.course-status-certnotavailable {
+        background-color: $gray-l5;
+        border: 0;
       }
 
       &.course-status-certrendering {
-
+        background-color: $gray-l5;
+        border: 0;
         .cta {
           margin-top: 2px;
         }
