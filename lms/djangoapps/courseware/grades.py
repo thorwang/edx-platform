@@ -266,12 +266,6 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
                         descriptor.location in field_data_cache.scores
                         for descriptor in section['xmoduledescriptors']
                     )
-                    # should_grade_section = StudentModule.objects.filter(
-                    #    student=student,
-                    #    module_state_key__in=[
-                    #        descriptor.location for descriptor in section['xmoduledescriptors']
-                    #    ]
-                    #).exists()
 
             # If we haven't seen a single problem in the section, we don't have
             # to grade it at all! We can assume 0%
@@ -282,14 +276,9 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
                     '''creates an XModule instance given a descriptor'''
                     # TODO: We need the request to pass into here. If we could forego that, our arguments
                     # would be simpler
-
-                    # Is it safe to do this?
-#                    with manual_transaction():
-#                        field_data_cache = FieldDataCache([descriptor], course.id, student)
                     return get_module_for_descriptor(student, request, descriptor, field_data_cache, course.id)
 
                 for module_descriptor in yield_dynamic_descriptor_descendents(section_descriptor, create_module):
-
                     (correct, total) = get_score(
                         course.id,
                         student,
@@ -532,15 +521,6 @@ def get_score(course_id, user, problem_descriptor, module_creator, max_scores_ca
     student_module = None
     if field_data_cache:
         student_module = field_data_cache.scores.get(problem_descriptor.location)
-
-        #if not student_module:
-        #    student_module = StudentModule.objects.get(
-        #        student=user,
-        #        course_id=course_id,
-        #        module_state_key=problem_descriptor.location
-        #    )
-    #except StudentModule.DoesNotExist:
-#        student_module = None
 
     max_score = max_scores_cache.get(problem_descriptor.location)
     if student_module is not None and student_module.max_grade is not None:
