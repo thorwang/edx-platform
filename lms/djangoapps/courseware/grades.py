@@ -31,11 +31,10 @@ from xblock.core import XBlock
 
 log = logging.getLogger("edx.courseware")
 
-GRADED_LOCATION_CATEGORIES = set(
-    cat for (cat, xblock_class) in XBlock.load_classes() if (
-        getattr(xblock_class, 'has_score', True) or getattr(xblock_class, 'has_children', True)
-    )
-)
+GRADED_LOCATION_CATEGORIES = {
+    cat for (cat, xb_cls) in XBlock.load_classes()
+    if getattr(xb_cls, "has_score", False) or getattr(xb_cls, "has_children", False)
+}
 
 
 def descriptor_filter(descriptor):
@@ -214,6 +213,7 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
 
     More information on the format is in the docstring for CourseGrader.
     """
+    import pdb; pdb.set_trace()
     if field_data_cache is None:
         with manual_transaction():
             field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
@@ -397,11 +397,6 @@ def _progress_summary(student, request, course, field_data_cache):
 
     """
     with manual_transaction():
-        #field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-        #    course.id, student, course, depth=None, descriptor_filter=descriptor_filter
-        #)
-        # TODO: We need the request to pass into here. If we could
-        # forego that, our arguments would be simpler
         course_module = get_module_for_descriptor(student, request, course, field_data_cache, course.id)
         if not course_module:
             # This student must not have access to the course.
