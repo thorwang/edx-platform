@@ -43,8 +43,14 @@ def descriptor_affects_grading(descriptor):
 
 class MaxScoresCache(object):
     """
-    A cache for students' problems' max scores when students look at, but
-    do not answer, problems.
+    A cache for unweighted max scores for problems.
+
+    The key assumption here is that any problem that has not yet recorded a
+    score for a user is worth the same number of points. An XBlock is free to
+    score one student at 2/5 and another at 1/3. But a problem that has never
+    issued a score -- say a problem two students have only seen mentioned in
+    their progress pages and never interacted with -- should be worth the same
+    number of points for everyone.
     """
     def __init__(self, cache_prefix):
         self.cache_prefix = cache_prefix
@@ -521,12 +527,16 @@ def get_score(course_id, user, problem_descriptor, module_creator, max_scores_ca
         # These are not problems, and do not have a score
         return (None, None)
 
-    #try:
     student_module = None
     if field_data_cache:
         student_module = field_data_cache.scores.get(problem_descriptor.location)
 
     max_score = max_scores_cache.get(problem_descriptor.location)
+
+    # If the student_module exists and has a max_grade associated with it, we 
+    # trust that value. This is important for cases where a student might have
+    # seen an older version of the problem -- they're still graded on what was
+    # possible when they tried the problem, not what it's worth now.
     if student_module is not None and student_module.max_grade is not None:
         correct = student_module.grade if student_module.grade is not None else 0
         total = student_module.max_grade
