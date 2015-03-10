@@ -7,14 +7,13 @@ from instructor.utils import DummyRequest
 
 class Command(BaseCommand):
 
-	def handle(self, *args, **options):
-		import ipdb; ipdb.set_trace()
-		course_id = args[0]
-		course_key = CourseKey.from_string(course_id)
-		course = get_course_by_id(course_key)
-		request = DummyRequest()
-		request.user = User.objects.get(username="staff")
+    def handle(self, *args, **options):
+        course_id = args[0]
+        course_key = CourseKey.from_string(course_id)
+        course = get_course_by_id(course_key)
+        request = DummyRequest()
+        request.user = User.objects.get(username="staff")
 
-		# print "grading {} students".format(User.objects.count())
-		for index, user in enumerate(User.objects.all()):
-			grade(user, request, course)
+        # print "grading {} students".format(User.objects.count())
+        for index, user in enumerate(User.objects.all()):
+            grade(user, request, course)
