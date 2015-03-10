@@ -64,7 +64,7 @@ class FieldDataCache(object):
         self.cache = {}
         self.descriptors = descriptors
         self.select_for_update = select_for_update
-        self.scores = {}
+        self.locations_to_scores = {}
 
         if asides is None:
             self.asides = []
@@ -81,9 +81,8 @@ class FieldDataCache(object):
                     cache_key = self._cache_key_from_field_object(scope, field_object)
                     self.cache[cache_key] = field_object
                     if scope == Scope.user_state:
-                        student_module = field_object
-                        scope, location = cache_key
-                        self.scores[location] = student_module
+                        _scope, location = cache_key
+                        self.locations_to_scores[location] = field_object  # This is a StudentModule
 
     @classmethod
     def cache_for_descriptor_descendents(cls, course_id, user, descriptor, depth=None,

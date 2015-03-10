@@ -278,7 +278,7 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
             if not should_grade_section:
                 with manual_transaction():
                     should_grade_section = any(
-                        descriptor.location in field_data_cache.scores
+                        descriptor.location in field_data_cache.locations_to_scores
                         for descriptor in section['xmoduledescriptors']
                     )
 
@@ -529,7 +529,7 @@ def get_score(course_id, user, problem_descriptor, module_creator, max_scores_ca
 
     student_module = None
     if field_data_cache:
-        student_module = field_data_cache.scores.get(problem_descriptor.location)
+        student_module = field_data_cache.locations_to_scores.get(problem_descriptor.location)
 
     max_score = max_scores_cache.get(problem_descriptor.location)
 
