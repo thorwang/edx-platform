@@ -61,9 +61,6 @@ class MaxScoresCache(object):
             for remote_key, value in remote_dict.items()
             if value is not None
         }
-        print "\n\n\nFound {} entries using prefix {}\n\n\n".format(
-            len(self._max_scores_cache), self.cache_prefix
-        )
 
     def push_to_remote(self):
         """
