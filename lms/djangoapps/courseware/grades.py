@@ -26,24 +26,19 @@ from .models import StudentModule
 from .module_render import get_module_for_descriptor
 from submissions import api as sub_api  # installed from the edx-submissions repository
 from opaque_keys import InvalidKeyError
-from xblock.core import XBlock
-
 
 log = logging.getLogger("edx.courseware")
 
-GRADED_LOCATION_CATEGORIES = {
-    cat for (cat, xb_cls) in XBlock.load_classes()
-    if getattr(xb_cls, "has_score", False) or getattr(xb_cls, "has_children", False)
-}
-
-
-def descriptor_filter(descriptor):
+def descriptor_affects_grading(descriptor):
     """
-    Pass a location filter to the field data cache so that we don't
-    instantiate descriptors that are never graded (like video descriptors)
-    during grading
+    Returns True if the descriptor could have any impact on grading, else False.
+
+    Something might be a scored item if it is capable of storing a score
+    (has_score=True). We also have to include anything that can have children,
+    since those children might have scores. We can avoid things like Videos,
+    which have state but cannot ever impact someone's grade.
     """
-    return descriptor.location.category in GRADED_LOCATION_CATEGORIES
+    return getattr(descriptor, "has_score", False) or getattr(descriptor, "has_children", False)
 
 
 class MaxScoresCache(object):
@@ -51,17 +46,23 @@ class MaxScoresCache(object):
     A cache for students' problems' max scores when students look at, but
     do not answer, problems.
     """
-    def __init__(self, locations):
-        self.locations = locations
+    def __init__(self, cache_prefix):
+        self.cache_prefix = cache_prefix
         self._max_scores_cache = {}
         self._max_scores_updates = {}
 
-    def fetch_from_remote(self):
+    def fetch_from_remote(self, locations):
         """
         Populate the local cache with values from django's cache
         """
-        self._max_scores_cache = cache.get_many(
-            [unicode(loc) for loc in self.locations]
+        remote_dict = cache.get_many([self._remote_cache_key(loc) for loc in locations])
+        self._max_scores_cache = {
+            self._local_cache_key(remote_key): value
+            for remote_key, value in remote_dict.items()
+            if value is not None
+        }
+        print "\n\n\nFound {} entries using prefix {}\n\n\n".format(
+            len(self._max_scores_cache), self.cache_prefix
         )
 
     def push_to_remote(self):
@@ -69,7 +70,19 @@ class MaxScoresCache(object):
         Update the remote cache
         """
         if self._max_scores_updates:
-            cache.set_many(self._max_scores_updates, 60 * 30)  # 30 mins
+            cache.set_many(
+                {
+                    self._remote_cache_key(key): value
+                    for key, value in self._max_scores_updates.items()
+                },
+                60 * 60 * 24  # 1 day
+            )
+
+    def _remote_cache_key(self, location):
+        return "grades.MaxScores.{}___{}".format(self.cache_prefix, unicode(location))
+
+    def _local_cache_key(self, remote_key):
+        return remote_key.split("___", 1)[1]
 
     def set(self, location, max_score):
         """
@@ -213,17 +226,16 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
 
     More information on the format is in the docstring for CourseGrader.
     """
-    import pdb; pdb.set_trace()
     if field_data_cache is None:
         with manual_transaction():
             field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-                course.id, student, course, depth=None, descriptor_filter=descriptor_filter
+                course.id, student, course, depth=None, descriptor_filter=descriptor_affects_grading
             )
 
-    max_scores_cache = MaxScoresCache(
+    max_scores_cache = MaxScoresCache(course.subtree_edited_on.isoformat())
+    max_scores_cache.fetch_from_remote(
         [descriptor.location for descriptor in field_data_cache.descriptors]
     )
-    max_scores_cache.fetch_from_remote()
 
     grading_context = course.grading_context
     raw_scores = []
@@ -404,10 +416,10 @@ def _progress_summary(student, request, course, field_data_cache):
 
     submissions_scores = sub_api.get_scores(course.id.to_deprecated_string(), anonymous_id_for_user(student, course.id))
 
-    max_scores_cache = MaxScoresCache(
-        descriptor.location for descriptor in field_data_cache.descriptors
+    max_scores_cache = MaxScoresCache(course.subtree_edited_on.isoformat())
+    max_scores_cache.fetch_from_remote(
+        [descriptor.location for descriptor in field_data_cache.descriptors]
     )
-    max_scores_cache.fetch_from_remote()
 
     chapters = []
     # Don't include chapters that aren't displayable (e.g. due to error)

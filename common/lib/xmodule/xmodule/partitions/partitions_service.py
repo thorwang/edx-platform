@@ -49,7 +49,6 @@ class PartitionService(object):
         """
         cache_key = "PartitionService.ugidfp.{}.{}.{}".format(self._user.id, self._course_id, user_partition_id)
         request_cache = RequestCache.get_request_cache()
-        print type(request_cache)
         if cache_key in request_cache.data:
             return request_cache.data[cache_key]
 
@@ -62,7 +61,6 @@ class PartitionService(object):
 
         group = self.get_group(user_partition)
         group_id = group.id if group else None
-
         request_cache.data[cache_key] = group_id
 
         return group_id

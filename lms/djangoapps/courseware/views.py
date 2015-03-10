@@ -1026,7 +1026,7 @@ def _progress(request, course_key, student_id):
     student = User.objects.prefetch_related("groups").get(id=student.id)
 
     field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-        course.id, student, course, depth=None, descriptor_filter=grades.descriptor_filter
+        course.id, student, course, depth=None, descriptor_filter=grades.descriptor_affects_grading
     )
 
     courseware_summary = grades.progress_summary(student, request, course, field_data_cache)
