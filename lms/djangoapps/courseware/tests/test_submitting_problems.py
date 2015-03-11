@@ -452,7 +452,7 @@ class TestCourseGrader(TestSubmittingProblems):
                 module_state_key=self.problem_location('p2')
             ).exists()
         )
-        location_to_cache=unicode(self.problem_location('p2'))
+        location_to_cache = unicode(self.problem_location('p2'))
         max_scores_cache = grades.MaxScoresCache.create_for_course(self.course)
 
         # problem isn't in the cache

@@ -377,7 +377,7 @@ class TestPartitionService(PartitionTestCase):
                 first_group.id,
                 ps.get_user_group_id_for_partition(user_partition_id)
             )
-    
+
         # Our uncached service should be accurate.
         self.assertEqual(
             second_group.id,

@@ -147,7 +147,6 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         self.request = RequestFactory().get('/')
         self.locations = [problem.location for problem in self.problems]
 
-    @override_settings(KEY_PREFIX=str(uuid.uuid4()))  # hack to ensure unique cache per test
     def test_max_scores_cache(self):
         """
         Tests the behavior fo the MaxScoresCache
@@ -159,10 +158,14 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         # add score to cache
         max_scores_cache.set(self.locations[0], 1)
         self.assertEqual(len(max_scores_cache._max_scores_updates), 1)
+
         # push to remote cache
         max_scores_cache.push_to_remote()
-        # fetch from remote cache
+
+        # create a new cache with the same params, fetch from remote cache
+        max_scores_cache = MaxScoresCache("test_max_scores_cache")
         max_scores_cache.fetch_from_remote(self.locations)
+
         # see cache is populated
         self.assertEqual(len(max_scores_cache._max_scores_cache), 1)
 

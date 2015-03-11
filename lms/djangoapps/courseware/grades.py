@@ -29,17 +29,6 @@ from opaque_keys import InvalidKeyError
 
 log = logging.getLogger("edx.courseware")
 
-def descriptor_affects_grading(descriptor):
-    """
-    Returns True if the descriptor could have any impact on grading, else False.
-
-    Something might be a scored item if it is capable of storing a score
-    (has_score=True). We also have to include anything that can have children,
-    since those children might have scores. We can avoid things like Videos,
-    which have state but cannot ever impact someone's grade.
-    """
-    return getattr(descriptor, "has_score", False) or getattr(descriptor, "has_children", False)
-
 
 class MaxScoresCache(object):
     """
@@ -110,6 +99,21 @@ class MaxScoresCache(object):
 
         return max_score
 
+def descriptor_affects_grading(descriptor):
+    """
+    Returns True if the descriptor could have any impact on grading, else False.
+
+    Something might be a scored item if it is capable of storing a score
+    (has_score=True). We also have to include anything that can have children,
+    since those children might have scores. We can avoid things like Videos,
+    which have state but cannot ever impact someone's grade.
+    """
+    return getattr(descriptor, "has_score", False) or getattr(descriptor, "has_children", False)
+
+def create_field_data_cache_for_grading(course, user):
+    return FieldDataCache.cache_for_descriptor_descendents(
+        course.id, user, course, depth=None, descriptor_filter=descriptor_affects_grading
+    )
 
 def answer_distributions(course_key):
     """
@@ -235,9 +239,7 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
     """
     if field_data_cache is None:
         with manual_transaction():
-            field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-                course.id, student, course, depth=None, descriptor_filter=descriptor_affects_grading
-            )
+            field_data_cache = create_field_data_cache_for_grading(course, student)
 
     # Dict of item_ids -> (earned, possible) point tuples. This *only* grabs
     # scores that were registered with the submissions API, which for the moment
@@ -414,9 +416,8 @@ def _progress_summary(student, request, course, field_data_cache=None):
     """
     with manual_transaction():
         if field_data_cache is None:
-            field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-                course.id, student, course, depth=None, descriptor_filter=descriptor_affects_grading
-            )
+            field_data_cache = create_field_data_cache_for_grading(course, student)
+
         course_module = get_module_for_descriptor(student, request, course, field_data_cache, course.id)
         if not course_module:
             return None
@@ -536,7 +537,7 @@ def get_score(course_id, user, problem_descriptor, module_creator, max_scores_ca
 
     max_score = max_scores_cache.get(problem_descriptor.location)
 
-    # If the student_module exists and has a max_grade associated with it, we 
+    # If the student_module exists and has a max_grade associated with it, we
     # trust that value. This is important for cases where a student might have
     # seen an older version of the problem -- they're still graded on what was
     # possible when they tried the problem, not what it's worth now.

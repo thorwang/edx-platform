@@ -1191,6 +1191,7 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
                 getattr(xblock_class, 'has_score', True) or getattr(xblock_class, 'has_children', True)
             )
         )
+
         def possibly_scored(usage_key):
             return usage_key.block_type in GRADED_LOCATION_CATEGORIES
 
