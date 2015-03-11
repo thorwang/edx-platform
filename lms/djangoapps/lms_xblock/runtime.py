@@ -196,13 +196,14 @@ class LmsModuleSystem(LmsHandlerUrls, ModuleSystem):  # pylint: disable=abstract
     ModuleSystem specialized to the LMS
     """
     def __init__(self, **kwargs):
+        request_cache_dict = RequestCache.get_request_cache().data
         services = kwargs.setdefault('services', {})
         services['user_tags'] = UserTagsService(self)
         services['partitions'] = LmsPartitionService(
             user=kwargs.get('user'),
             course_id=kwargs.get('course_id'),
             track_function=kwargs.get('track_function', None),
-            request_cache=RequestCache.get_request_cache()
+            cache=request_cache_dict
         )
         services['library_tools'] = LibraryToolsService(modulestore())
         services['fs'] = xblock.reference.plugins.FSService()
