@@ -438,7 +438,6 @@ class TestCourseGrader(TestSubmittingProblems):
         )
         self.assertEqual(json.loads(resp.content).get("success"), err_msg)
 
-    @override_settings(KEY_PREFIX=str(uuid.uuid4()))  # hack: we do this to ensure a unique cache per test
     def test_grade_with_max_score_cache(self):
         """
         Tests that the max score cache is populated after a grading run
@@ -454,11 +453,16 @@ class TestCourseGrader(TestSubmittingProblems):
             ).exists()
         )
         location_to_cache=unicode(self.problem_location('p2'))
+        max_scores_cache = grades.MaxScoresCache.create_for_course(self.course)
+
         # problem isn't in the cache
-        self.assertIsNone(cache.get(location_to_cache))
+        max_scores_cache.fetch_from_remote([location_to_cache])
+        self.assertIsNone(max_scores_cache.get(location_to_cache))
         self.check_grade_percent(0.33)
+
         # problem is in the cache
-        self.assertIsNotNone(cache.get(location_to_cache))
+        max_scores_cache.fetch_from_remote([location_to_cache])
+        self.assertIsNotNone(max_scores_cache.get(location_to_cache))
         self.check_grade_percent(0.33)
 
     @patch.dict("django.conf.settings.FEATURES", {"ENABLE_MAX_SCORE_CACHE": False})

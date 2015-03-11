@@ -305,11 +305,11 @@ class TestPartitionService(PartitionTestCase):
 
     def setUp(self):
         super(TestPartitionService, self).setUp()
-        course = Mock(id=SlashSeparatedCourseKey('org_0', 'course_0', 'run_0'))
+        self.course = Mock(id=SlashSeparatedCourseKey('org_0', 'course_0', 'run_0'))
         self.partition_service = StaticPartitionService(
             [self.user_partition],
             user=Mock(username='ma', email='ma@edx.org', is_staff=False, is_active=True),
-            course_id=course.id,
+            course_id=self.course.id,
             track_function=Mock()
         )
 
@@ -325,8 +325,18 @@ class TestPartitionService(PartitionTestCase):
 
         # switch to the second group and verify that it is returned for the user
         self.user_partition.scheme.current_group = groups[1]    # pylint: disable=no-member
-        group2_id = self.partition_service.get_user_group_id_for_partition(user_partition_id)
+        #group2_id = self.partition_service.get_user_group_id_for_partition(user_partition_id)
+        #self.assertEqual(group2_id, groups[1].id)    # pylint: disable=no-member
+
+        partition_service2 = StaticPartitionService(
+            [self.user_partition],
+            user=Mock(username='ma', email='ma@edx.org', is_staff=False, is_active=True),
+            course_id=self.course.id,
+            track_function=Mock()
+        )
+        group2_id = partition_service2.get_user_group_id_for_partition(user_partition_id)
         self.assertEqual(group2_id, groups[1].id)    # pylint: disable=no-member
+
 
     def test_get_group(self):
         """

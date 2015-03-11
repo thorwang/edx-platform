@@ -57,6 +57,10 @@ class MaxScoresCache(object):
         self._max_scores_cache = {}
         self._max_scores_updates = {}
 
+    @classmethod
+    def create_for_course(cls, course):
+        return cls(course.subtree_edited_on.isoformat())
+
     def fetch_from_remote(self, locations):
         """
         Populate the local cache with values from django's cache
@@ -235,20 +239,17 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
                 course.id, student, course, depth=None, descriptor_filter=descriptor_affects_grading
             )
 
-    max_scores_cache = MaxScoresCache(course.subtree_edited_on.isoformat())
+    # Dict of item_ids -> (earned, possible) point tuples. This *only* grabs
+    # scores that were registered with the submissions API, which for the moment
+    # means only openassessment (edx-ora2)
+    submissions_scores = sub_api.get_scores(course.id.to_deprecated_string(), anonymous_id_for_user(student, course.id))
+    max_scores_cache = MaxScoresCache.create_for_course(course)
     max_scores_cache.fetch_from_remote(
         [descriptor.location for descriptor in field_data_cache.descriptors]
     )
 
     grading_context = course.grading_context
     raw_scores = []
-
-    # Dict of item_ids -> (earned, possible) point tuples. This *only* grabs
-    # scores that were registered with the submissions API, which for the moment
-    # means only openassessment (edx-ora2)
-    submissions_scores = sub_api.get_scores(
-        course.id.to_deprecated_string(), anonymous_id_for_user(student, course.id)
-    )
 
     totaled_scores = {}
     # This next complicated loop is just to collect the totaled_scores, which is
@@ -378,7 +379,7 @@ def grade_for_percentage(grade_cutoffs, percentage):
 
 
 @transaction.commit_manually
-def progress_summary(student, request, course, field_data_cache):
+def progress_summary(student, request, course, field_data_cache=None):
     """
     Wraps "_progress_summary" with the manual_transaction context manager just
     in case there are unanticipated errors.
@@ -390,7 +391,7 @@ def progress_summary(student, request, course, field_data_cache):
 # TODO: This method is not very good. It was written in the old course style and
 # then converted over and performance is not good. Once the progress page is redesigned
 # to not have the progress summary this method should be deleted (so it won't be copied).
-def _progress_summary(student, request, course, field_data_cache):
+def _progress_summary(student, request, course, field_data_cache=None):
     """
     Unwrapped version of "progress_summary".
 
@@ -412,14 +413,16 @@ def _progress_summary(student, request, course, field_data_cache):
 
     """
     with manual_transaction():
+        if field_data_cache is None:
+            field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
+                course.id, student, course, depth=None, descriptor_filter=descriptor_affects_grading
+            )
         course_module = get_module_for_descriptor(student, request, course, field_data_cache, course.id)
         if not course_module:
-            # This student must not have access to the course.
             return None
 
     submissions_scores = sub_api.get_scores(course.id.to_deprecated_string(), anonymous_id_for_user(student, course.id))
-
-    max_scores_cache = MaxScoresCache(course.subtree_edited_on.isoformat())
+    max_scores_cache = MaxScoresCache.create_for_course(course)
     max_scores_cache.fetch_from_remote(
         [descriptor.location for descriptor in field_data_cache.descriptors]
     )

@@ -9,7 +9,7 @@ from mock import patch
 from opaque_keys.edx.locations import SlashSeparatedCourseKey, Location
 import uuid
 
-from courseware.grades import grade, iterate_grades_for, MaxScoresCache, descriptor_filter
+from courseware.grades import descriptor_affects_grading, grade, iterate_grades_for, MaxScoresCache
 from courseware.model_data import FieldDataCache
 from courseware.tests.factories import StudentModuleFactory
 from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
@@ -152,19 +152,17 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         """
         Tests the behavior fo the MaxScoresCache
         """
-        max_scores_cache = MaxScoresCache(self.locations)
-
-        self.assertEqual(max_scores_cache.locations, self.locations)
+        max_scores_cache = MaxScoresCache("test_max_scores_cache")
         self.assertEqual(len(max_scores_cache._max_scores_cache), 0)
-
         self.assertEqual(len(max_scores_cache._max_scores_updates), 0)
+
         # add score to cache
         max_scores_cache.set(self.locations[0], 1)
         self.assertEqual(len(max_scores_cache._max_scores_updates), 1)
         # push to remote cache
         max_scores_cache.push_to_remote()
         # fetch from remote cache
-        max_scores_cache.fetch_from_remote()
+        max_scores_cache.fetch_from_remote(self.locations)
         # see cache is populated
         self.assertEqual(len(max_scores_cache._max_scores_cache), 1)
 
@@ -197,7 +195,7 @@ class TestDescriptorFilter(ModuleStoreTestCase):
 
     def test_field_data_cache_filter(self):
         field_data_cache_filter = FieldDataCache.cache_for_descriptor_descendents(
-            self.course.id, self.student, self.course, depth=None, descriptor_filter=descriptor_filter
+            self.course.id, self.student, self.course, depth=None, descriptor_filter=descriptor_affects_grading
         )
         categories = set(descriptor.category for descriptor in field_data_cache_filter.descriptors)
         self.assertNotIn('video', categories)
