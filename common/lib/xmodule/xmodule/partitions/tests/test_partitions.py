@@ -369,14 +369,10 @@ class TestPartitionService(PartitionTestCase):
         second_group = self.user_partition.groups[1]
         self.user_partition.scheme.current_group = second_group
 
-        self.assertIs(ps_shared_cache_1._cache, ps_shared_cache_2._cache)
-
         # Both of the shared cache entries should return the old value, even
         # ps_shared_cache_2, which was never asked for the value the first time
         # Likewise, our separately cached piece should return the original answer
         for ps in [ps_shared_cache_1, ps_shared_cache_2, ps_diff_cache]:
-            print ps
-            print ps._cache
             self.assertEqual(
                 first_group.id,
                 ps.get_user_group_id_for_partition(user_partition_id)
