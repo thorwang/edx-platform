@@ -149,12 +149,12 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         Tests the behavior fo the MaxScoresCache
         """
         max_scores_cache = MaxScoresCache("test_max_scores_cache")
-        self.assertEqual(len(max_scores_cache.num_cached_from_remote()), 0)
-        self.assertEqual(len(max_scores_cache.num_cached_updates()), 0)
+        self.assertEqual(max_scores_cache.num_cached_from_remote(), 0)
+        self.assertEqual(max_scores_cache.num_cached_updates(), 0)
 
         # add score to cache
         max_scores_cache.set(self.locations[0], 1)
-        self.assertEqual(len(max_scores_cache.num_cached_updates()), 1)
+        self.assertEqual(max_scores_cache.num_cached_updates(), 1)
 
         # push to remote cache
         max_scores_cache.push_to_remote()
@@ -164,7 +164,7 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         max_scores_cache.fetch_from_remote(self.locations)
 
         # see cache is populated
-        self.assertEqual(len(max_scores_cache.num_cached_from_remote()), 1)
+        self.assertEqual(max_scores_cache.num_cached_from_remote(), 1)
 
 
 class TestDescriptorFilter(ModuleStoreTestCase):

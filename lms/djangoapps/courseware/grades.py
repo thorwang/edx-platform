@@ -326,13 +326,12 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
 
                 for module_descriptor in yield_dynamic_descriptor_descendents(section_descriptor, create_module):
                     (correct, total) = get_score(
-                        course.id,
                         student,
                         module_descriptor,
                         create_module,
+                        field_data_cache,
+                        submissions_scores,
                         max_scores_cache,
-                        field_data_cache=field_data_cache,
-                        scores_cache=submissions_scores,
                     )
                     if correct is None and total is None:
                         continue
@@ -479,13 +478,12 @@ def _progress_summary(student, request, course, field_data_cache=None):
                 for module_descriptor in yield_dynamic_descriptor_descendents(section_module, module_creator):
                     course_id = course.id
                     (correct, total) = get_score(
-                        course_id,
                         student,
                         module_descriptor,
                         module_creator,
+                        field_data_cache,
+                        submissions_scores,
                         max_scores_cache,
-                        field_data_cache=field_data_cache,
-                        scores_cache=submissions_scores,
                     )
                     if correct is None and total is None:
                         continue
@@ -519,7 +517,7 @@ def _progress_summary(student, request, course, field_data_cache=None):
     return chapters
 
 
-def get_score(course_id, user, problem_descriptor, module_creator, max_scores_cache, field_data_cache=None, scores_cache=None):
+def get_score(user, problem_descriptor, module_creator, field_data_cache, submissions_scores_cache, max_scores_cache):
     """
     Return the score for a user on a problem, as a tuple (correct, total).
     e.g. (5,7) if you got 5 out of 7 points.
@@ -529,19 +527,21 @@ def get_score(course_id, user, problem_descriptor, module_creator, max_scores_ca
 
     user: a Student object
     problem_descriptor: an XModuleDescriptor
+    field_data_cache: a FieldDataCache
     module_creator: a function that takes a descriptor, and returns the corresponding XModule for this user.
            Can return None if user doesn't have access, or if something else went wrong.
-    scores_cache: A dict of location names to (earned, possible) point tuples.
+    submissions_scores_cache: A dict of location names to (earned, possible) point tuples.
            If an entry is found in this cache, it takes precedence.
+    max_scores_cache: a MaxScoresCache
     """
-    scores_cache = scores_cache or {}
+    submissions_scores_cache = submissions_scores_cache or {}
 
     if not user.is_authenticated():
         return (None, None)
 
     location_url = problem_descriptor.location.to_deprecated_string()
-    if location_url in scores_cache:
-        return scores_cache[location_url]
+    if location_url in submissions_scores_cache:
+        return submissions_scores_cache[location_url]
 
     # some problems have state that is updated independently of interaction
     # with the LMS, so they need to always be scored. (E.g. foldit.)
