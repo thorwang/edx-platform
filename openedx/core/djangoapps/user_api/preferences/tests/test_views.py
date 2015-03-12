@@ -13,7 +13,7 @@ from django.conf import settings
 from openedx.core.djangoapps.user_api.models import UserPreference
 from openedx.core.djangoapps.user_api.accounts.tests.test_views import UserAPITestCase
 
-TOO_LONG_PREFERENCE_KEY = "x" * 256
+TOO_LONG_PREFERENCE_KEY = u"x" * 256
 
 
 @ddt.ddt
@@ -192,7 +192,18 @@ class TestPreferencesAPI(UserAPITestCase):
             },
             expected_status=400
         )
-        # TODO: verify the response
+        expected_message = u"The user preference has the following errors: " \
+                           "{'key': [u'Ensure this value has at most 255 characters (it has 256).']}"
+        self.assertEquals(
+            response.data,
+            {
+                "field_errors": {
+                    TOO_LONG_PREFERENCE_KEY: {
+                        "developer_message": expected_message
+                    }
+                },
+            }
+        )
 
         # Verify that GET returns the original preferences
         response = self.send_get(self.client)
@@ -202,6 +213,32 @@ class TestPreferencesAPI(UserAPITestCase):
             u"extra_pref": u"extra_value",
         }
         self.assertEqual(expected_preferences, response.data)
+
+    def test_update_preferences_bad_request(self):
+        """
+        Test that a client (logged in) receives appropriate errors for a bad request.
+        """
+        self.client.login(username=self.user.username, password=self.test_password)
+
+        # Verify a non-dict request
+        response = self.send_patch(self.client, "non_dict_request", expected_status=400)
+        self.assertEqual(
+            response.data,
+            {
+                "developer_message": u"No data provided for user preference update",
+                "user_message": u"No data provided for user preference update"
+            }
+        )
+
+        # Verify an empty dict request
+        response = self.send_patch(self.client, {}, expected_status=400)
+        self.assertEqual(
+            response.data,
+            {
+                "developer_message": u"No data provided for user preference update",
+                "user_message": u"No data provided for user preference update"
+            }
+        )
 
     @ddt.data(
         ("different_client", "different_user"),
@@ -336,7 +373,14 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         self._set_url("new_key")
         self.client.login(username=self.user.username, password=self.test_password)
-        self.send_put(self.client, None, expected_status=400)
+        response = self.send_put(self.client, None, expected_status=400)
+        self.assertEqual(
+            response.data,
+            {
+                "developer_message": u"Preference new_key cannot be set to an empty value",
+                "user_message": u"Preference new_key cannot be set to an empty value"
+            }
+        )
         self.send_get(self.client, expected_status=404)
 
     def test_create_preference_too_long_key(self):
@@ -403,7 +447,14 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         Test that a client (logged in) cannot update a preference to null.
         """
         self.client.login(username=self.user.username, password=self.test_password)
-        self.send_put(self.client, None, expected_status=400)
+        response = self.send_put(self.client, None, expected_status=400)
+        self.assertEqual(
+            response.data,
+            {
+                "developer_message": u"Preference test_key cannot be set to an empty value",
+                "user_message": u"Preference test_key cannot be set to an empty value"
+            }
+        )
         response = self.send_get(self.client)
         self.assertEqual(self.test_pref_value, response.data)
 

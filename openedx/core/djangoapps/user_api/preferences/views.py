@@ -78,6 +78,15 @@ class PreferencesView(APIView):
         """
         PATCH /api/user/v0/preferences/{username}/
         """
+        if not request.DATA or not getattr(request.DATA, "keys", None):
+            error_message = _("No data provided for user preference update")
+            return Response(
+                {
+                    "developer_message": error_message,
+                    "user_message": error_message
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
         try:
             update_user_preferences(request.user, request.DATA, username=username)
         except (UserNotFound, UserNotAuthorized):

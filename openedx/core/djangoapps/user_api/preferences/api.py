@@ -144,7 +144,7 @@ def set_user_preference(requesting_user, preference_key, preference_value, usern
         requesting_user (User): The user requesting to modify account information. Only the user with username
             'username' has permissions to modify account information.
         preference_key (string): The key for the user preference.
-        preference_value (string): The value to be stored.
+        preference_value (string): The value to be stored. Non-string values will be converted to strings.
         username (string): Optional username specifying which account should be updated. If not specified,
             `requesting_user.username` is assumed.
 
@@ -187,7 +187,7 @@ def delete_user_preference(requesting_user, preference_key, username=None):
             `requesting_user.username` is assumed.
 
     Returns:
-        True if the preference was deleted, False if the user did not have a preference with the supplied key
+        True if the preference was deleted, False if the user did not have a preference with the supplied key.
 
     Raises:
         UserNotFound: no user with username `username` exists (or `requesting_user.username` if
@@ -308,7 +308,7 @@ def _validate_user_preference(user, preference_key, preference_value):
     Arguments:
         user (User): The user whose preference is being validated.
         preference_key (string): The key for the user preference.
-        preference_value (string): The value to be stored.
+        preference_value (string): The value to be stored. Non-string values will be converted to strings.
 
     Raises:
         PreferenceValidationError: the supplied key and/or value for a user preference are invalid.
@@ -327,7 +327,7 @@ def _validate_user_preference(user, preference_key, preference_value):
     else:
         serializer = RawUserPreferenceSerializer(data=new_data)
     if not serializer.is_valid():
-        error_message = "The user preference has the following errors: {errors}".format(errors=serializer.errors)
+        error_message = u"The user preference has the following errors: {errors}".format(errors=serializer.errors)
         raise PreferenceValidationError({
             preference_key: { "developer_message": error_message }
         })

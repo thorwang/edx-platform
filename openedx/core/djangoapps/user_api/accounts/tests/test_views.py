@@ -248,7 +248,7 @@ class TestAccountAPI(UserAPITestCase):
         # TODO: what should the format of this be?
         self.assertEqual("", data["language"])
         self.assertEqual("m", data["gender"])
-        self.assertEqual("World domination", data["goals"])
+        self.assertEqual("Learn a lot", data["goals"])
         self.assertEqual(self.user.email, data["email"])
         self.assertIsNotNone(data["date_joined"])
         self.assertTrue(data["is_active"])
