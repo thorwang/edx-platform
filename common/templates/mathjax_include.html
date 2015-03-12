@@ -13,6 +13,8 @@
               displayMath: [ ['$$','$$'], ["\\[","\\]"]]}
   });
   HUB = MathJax.Hub
+
+
 </script>
 %else:
 <script type="text/x-mathjax-config">
@@ -28,31 +30,27 @@
       ]
     }
   });
-   MathJax.Hub.signal.Interest(function(message) {
-    set_mathjax_display_div_settings(message);
-  });
-  function set_mathjax_display_div_settings(message) {
-    if (message[1].id && message[0] == 'End Math') {
-        var status = message[2] == 'Reprocess' ? true : false;
-        if (status) {
-            try {
-                var mathjax_display = message[1].MathJax['preview'].nextSibling;
-                if (mathjax_display.className == 'MathJax_Display') {
-                    var input_id = mathjax_display.parentElement.id.replace("_preview", "");
-                    mathjax_display.setAttribute('aria-label', 'Math output for ' + input_id);
-                    mathjax_display.setAttribute('tabindex', '0');
-                }
-
-            } catch (err) {
-
-            }
+  MathJax.Hub.signal.Interest(function(message) {
+        if(message[0] === "End Math") {
+            set_mathjax_display_div_settings();
         }
-      }
+    });
+  function set_mathjax_display_div_settings() {
+  $('.MathJax_Display').each(function( index ) {
+    var input_id = this.parentElement.id.replace("_preview", "");
+    this.setAttribute('id', input_id + '_mathjax');
+    this.setAttribute('tabindex', '0');
+    this.removeAttribute('role');
+    this.removeAttribute('aria-readonly');
+    });
     }
+
+
 </script>
 %endif
 
 <!-- This must appear after all mathjax-config blocks, so it is after the imports from the other templates.
      It can't be run through static.url because MathJax uses crazy url introspection to do lazy loading of
      MathJax extension libraries -->
-<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/2.4-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full"></script>
+<script type="text/javascript"
+        src="https://cdn.mathjax.org/mathjax/2.4-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full"></script>
