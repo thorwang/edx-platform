@@ -178,7 +178,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
             **kwargs
         )
 
-    def assert_category_map_with_ignore_always_cohort_flag(self, expected):
+    def assert_map_with_always_cohort_flag(self, expected):
         self.assertEqual(
             utils.get_discussion_category_map(self.course, ignore_always_cohort_inline_discussions=True),
             expected
@@ -299,7 +299,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter", "Discussion")
         set_course_cohort_settings(course_key=self.course.id, is_cohorted=True, always_cohort_inline_discussions=False)
 
-        self.assert_category_map_with_ignore_always_cohort_flag(
+        self.assert_map_with_always_cohort_flag(
             {
                 "entries": {},
                 "subcategories": {
