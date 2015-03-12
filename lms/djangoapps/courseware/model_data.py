@@ -85,7 +85,7 @@ class FieldDataCache(object):
                         # from the cache_key instead of field_object.module_state_key because the
                         # latter does not have run information and won't match against the locations
                         # we get when crawling the course.
-                        _scope, location = cache_key
+                        _scope, location = cache_key  # pylint:disable=unbalanced-tuple-unpacking
                         self.locations_to_scores[location] = field_object  # This is a StudentModule
 
     @classmethod
