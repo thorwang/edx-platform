@@ -1186,14 +1186,15 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
 
 
         """
-        GRADED_LOCATION_CATEGORIES = set(
+        graded_location_block_types = set(
             cat for (cat, xblock_class) in XBlock.load_classes() if (
                 getattr(xblock_class, 'has_score', True) or getattr(xblock_class, 'has_children', True)
             )
         )
 
         def possibly_scored(usage_key):
-            return usage_key.block_type in GRADED_LOCATION_CATEGORIES
+            """Can this XBlock type can have a score or children?"""
+            return usage_key.block_type in graded_location_block_types
 
         all_descriptors = []
         graded_sections = {}

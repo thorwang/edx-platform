@@ -1024,7 +1024,7 @@ def _progress(request, course_key, student_id):
     # The pre-fetching of groups is done to make auth checks not require an
     # additional DB lookup (this kills the Progress page in particular).
     student = User.objects.prefetch_related("groups").get(id=student.id)
-    field_data_cache = grades.create_field_data_cache_for_grading(course, student)
+    field_data_cache = grades.field_data_cache_for_grading(course, student)
     courseware_summary = grades.progress_summary(student, request, course, field_data_cache)
     studio_url = get_studio_url(course, 'settings/grading')
     grade_summary = grades.grade(student, request, course, field_data_cache=field_data_cache)

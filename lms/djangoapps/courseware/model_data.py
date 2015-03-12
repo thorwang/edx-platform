@@ -81,7 +81,7 @@ class FieldDataCache(object):
                     cache_key = self._cache_key_from_field_object(scope, field_object)
                     self.cache[cache_key] = field_object
                     if scope == Scope.user_state:
-                        _scope, location = cache_key
+                        location = field_object.module_state_key
                         self.locations_to_scores[location] = field_object  # This is a StudentModule
 
     @classmethod

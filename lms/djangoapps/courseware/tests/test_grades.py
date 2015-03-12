@@ -3,15 +3,12 @@ Test grade calculation.
 """
 from django.http import Http404
 from django.test.utils import override_settings
-from django.core.cache import cache
 from django.test.client import RequestFactory
 from mock import patch
-from opaque_keys.edx.locations import SlashSeparatedCourseKey, Location
-import uuid
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from courseware.grades import descriptor_affects_grading, grade, iterate_grades_for, MaxScoresCache
 from courseware.model_data import FieldDataCache
-from courseware.tests.factories import StudentModuleFactory
 from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
 from student.tests.factories import UserFactory
 from student.models import CourseEnrollment
@@ -152,12 +149,12 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         Tests the behavior fo the MaxScoresCache
         """
         max_scores_cache = MaxScoresCache("test_max_scores_cache")
-        self.assertEqual(len(max_scores_cache._max_scores_cache), 0)
-        self.assertEqual(len(max_scores_cache._max_scores_updates), 0)
+        self.assertEqual(len(max_scores_cache.num_cached_from_remote()), 0)
+        self.assertEqual(len(max_scores_cache.num_cached_updates()), 0)
 
         # add score to cache
         max_scores_cache.set(self.locations[0], 1)
-        self.assertEqual(len(max_scores_cache._max_scores_updates), 1)
+        self.assertEqual(len(max_scores_cache.num_cached_updates()), 1)
 
         # push to remote cache
         max_scores_cache.push_to_remote()
@@ -167,11 +164,14 @@ class TestMaxScoresCache(ModuleStoreTestCase):
         max_scores_cache.fetch_from_remote(self.locations)
 
         # see cache is populated
-        self.assertEqual(len(max_scores_cache._max_scores_cache), 1)
+        self.assertEqual(len(max_scores_cache.num_cached_from_remote()), 1)
 
 
 class TestDescriptorFilter(ModuleStoreTestCase):
-
+    """
+    Make sure we can filter the descriptors we pull back student state for via
+    the FieldDataCache.
+    """
     def setUp(self):
         super(TestDescriptorFilter, self).setUp()
         self.student = UserFactory.create()

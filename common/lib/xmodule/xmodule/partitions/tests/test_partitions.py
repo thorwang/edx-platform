@@ -309,6 +309,7 @@ class TestPartitionService(PartitionTestCase):
         self.partition_service = self._create_service("ma")
 
     def _create_service(self, username, cache=None):
+        """Convenience method to generate a StaticPartitionService for a user."""
         # Derive a "user_id" from the username, just so we don't have to add an
         # extra param to this method. Just has to be unique per user.
         user_id = abs(hash(username))
@@ -359,10 +360,10 @@ class TestPartitionService(PartitionTestCase):
 
         # Make sure our partition services all return the right thing, but skip
         # ps_shared_cache_2 so we can see if its cache got updated anyway.
-        for ps in [ps_shared_cache_1, ps_diff_cache, ps_uncached]:
+        for part_svc in [ps_shared_cache_1, ps_diff_cache, ps_uncached]:
             self.assertEqual(
                 first_group.id,
-                ps.get_user_group_id_for_partition(user_partition_id)
+                part_svc.get_user_group_id_for_partition(user_partition_id)
             )
 
         # Now select a new target group
@@ -372,10 +373,10 @@ class TestPartitionService(PartitionTestCase):
         # Both of the shared cache entries should return the old value, even
         # ps_shared_cache_2, which was never asked for the value the first time
         # Likewise, our separately cached piece should return the original answer
-        for ps in [ps_shared_cache_1, ps_shared_cache_2, ps_diff_cache]:
+        for part_svc in [ps_shared_cache_1, ps_shared_cache_2, ps_diff_cache]:
             self.assertEqual(
                 first_group.id,
-                ps.get_user_group_id_for_partition(user_partition_id)
+                part_svc.get_user_group_id_for_partition(user_partition_id)
             )
 
         # Our uncached service should be accurate.

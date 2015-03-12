@@ -48,6 +48,15 @@ class MaxScoresCache(object):
 
     @classmethod
     def create_for_course(cls, course):
+        """
+        Given a CourseDescriptor, return a correctly configured `MaxScoresCache`
+
+        This method will base the `MaxScoresCache` cache prefix value on the
+        last time something was published to the live version of the course.
+        This is so that we don't have to worry about stale cached values for
+        max scores -- any time a content change occurs, we change our cache
+        keys.
+        """
         return cls(course.subtree_edited_on.isoformat())
 
     def fetch_from_remote(self, locations):
@@ -75,10 +84,20 @@ class MaxScoresCache(object):
             )
 
     def _remote_cache_key(self, location):
+        """Convert a location to a remote cache key (add our prefixing)."""
         return "grades.MaxScores.{}___{}".format(self.cache_prefix, unicode(location))
 
     def _local_cache_key(self, remote_key):
+        """Convert a remote cache key to a local cache key (i.e. location str)."""
         return remote_key.split("___", 1)[1]
+
+    def num_cached_from_remote(self):
+        """How many items did we pull down from the remote cache?"""
+        return len(self._max_scores_cache)
+
+    def num_cached_updates(self):
+        """How many local updates are we waiting to push to the remote cache?"""
+        return len(self._max_scores_updates)
 
     def set(self, location, max_score):
         """
@@ -112,7 +131,14 @@ def descriptor_affects_grading(descriptor):
     return getattr(descriptor, "has_score", False) or getattr(descriptor, "has_children", False)
 
 
-def create_field_data_cache_for_grading(course, user):
+def field_data_cache_for_grading(course, user):
+    """
+    Given a CourseDescriptor and User, create the FieldDataCache for grading.
+
+    This will generate a FieldDataCache that only loads state for those things
+    that might possibly affect the grading process, and will ignore things like
+    Videos.
+    """
     return FieldDataCache.cache_for_descriptor_descendents(
         course.id, user, course, depth=None, descriptor_filter=descriptor_affects_grading
     )
@@ -242,7 +268,7 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
     """
     if field_data_cache is None:
         with manual_transaction():
-            field_data_cache = create_field_data_cache_for_grading(course, student)
+            field_data_cache = field_data_cache_for_grading(course, student)
 
     # Dict of item_ids -> (earned, possible) point tuples. This *only* grabs
     # scores that were registered with the submissions API, which for the moment
@@ -282,11 +308,10 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
                 )
 
             if not should_grade_section:
-                with manual_transaction():
-                    should_grade_section = any(
-                        descriptor.location in field_data_cache.locations_to_scores
-                        for descriptor in section['xmoduledescriptors']
-                    )
+                should_grade_section = any(
+                    descriptor.location in field_data_cache.locations_to_scores
+                    for descriptor in section['xmoduledescriptors']
+                )
 
             # If we haven't seen a single problem in the section, we don't have
             # to grade it at all! We can assume 0%
@@ -350,7 +375,7 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache):
 
     letter_grade = grade_for_percentage(course.grade_cutoffs, grade_summary['percent'])
     grade_summary['grade'] = letter_grade
-    grade_summary['totaled_scores'] = totaled_scores    # make this available, eg for instructor download & debugging
+    grade_summary['totaled_scores'] = totaled_scores   # make this available, eg for instructor download & debugging
     if keep_raw_scores:
         # way to get all RAW scores out to instructor
         # so grader can be double-checked
@@ -419,7 +444,7 @@ def _progress_summary(student, request, course, field_data_cache=None):
     """
     with manual_transaction():
         if field_data_cache is None:
-            field_data_cache = create_field_data_cache_for_grading(course, student)
+            field_data_cache = field_data_cache_for_grading(course, student)
 
         course_module = get_module_for_descriptor(student, request, course, field_data_cache, course.id)
         if not course_module:
