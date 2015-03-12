@@ -81,7 +81,11 @@ class FieldDataCache(object):
                     cache_key = self._cache_key_from_field_object(scope, field_object)
                     self.cache[cache_key] = field_object
                     if scope == Scope.user_state:
-                        location = field_object.module_state_key
+                        # In this case, field_object is a StudentModule. We take the location value
+                        # from the cache_key instead of field_object.module_state_key because the
+                        # latter does not have run information and won't match against the locations
+                        # we get when crawling the course.
+                        _scope, location = cache_key
                         self.locations_to_scores[location] = field_object  # This is a StudentModule
 
     @classmethod

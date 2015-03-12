@@ -57,7 +57,7 @@ class MaxScoresCache(object):
         max scores -- any time a content change occurs, we change our cache
         keys.
         """
-        return cls(course.subtree_edited_on.isoformat())
+        return cls("{}.{}".format(course.id, course.subtree_edited_on.isoformat()))
 
     def fetch_from_remote(self, locations):
         """
