@@ -99,6 +99,7 @@ class MaxScoresCache(object):
 
         return max_score
 
+
 def descriptor_affects_grading(descriptor):
     """
     Returns True if the descriptor could have any impact on grading, else False.
@@ -110,10 +111,12 @@ def descriptor_affects_grading(descriptor):
     """
     return getattr(descriptor, "has_score", False) or getattr(descriptor, "has_children", False)
 
+
 def create_field_data_cache_for_grading(course, user):
     return FieldDataCache.cache_for_descriptor_descendents(
         course.id, user, course, depth=None, descriptor_filter=descriptor_affects_grading
     )
+
 
 def answer_distributions(course_key):
     """

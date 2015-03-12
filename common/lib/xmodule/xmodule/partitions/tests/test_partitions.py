@@ -309,9 +309,9 @@ class TestPartitionService(PartitionTestCase):
         self.partition_service = self._create_service("ma")
 
     def _create_service(self, username, cache=None):
-        user_id = hash(username)
-        if user_id < 0:
-            user_id = user_id * -1
+        # Derive a "user_id" from the username, just so we don't have to add an
+        # extra param to this method. Just has to be unique per user.
+        user_id = abs(hash(username))
 
         return StaticPartitionService(
             [self.user_partition],
