@@ -330,6 +330,15 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         response = self.send_get(self.client)
         self.assertEqual(new_value, response.data)
 
+    def test_create_null_preference(self):
+        """
+        Test that a client (logged in) cannot create a null preference.
+        """
+        self._set_url("new_key")
+        self.client.login(username=self.user.username, password=self.test_password)
+        self.send_put(self.client, None, expected_status=400)
+        self.send_get(self.client, expected_status=404)
+
     def test_create_preference_too_long_key(self):
         """
         Test that a client cannot create preferences with bad keys
@@ -340,7 +349,11 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         new_value = "new value"
         self._set_url(too_long_preference_key)
         response = self.send_put(self.client, new_value, expected_status=400)
-        self.assertEqual(self.test_pref_value, response.data)
+        self.assertEquals(
+            response.data,
+            "The user preference has the following errors: "
+            "{'key': [u'Ensure this value has at most 255 characters (it has 256).']}"
+        )
 
     @ddt.data(
         ("different_client", "different_user"),
@@ -358,9 +371,9 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         self.send_put(client, new_value, expected_status=404)
 
     @ddt.data(
-        ("new value",),
+        (u"new value",),
         (10,),
-        ({"int_key": 10},)
+        ({u"int_key": 10},)
     )
     @ddt.unpack
     def test_update_preference(self, preference_value):
@@ -370,7 +383,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         self.client.login(username=self.user.username, password=self.test_password)
         self.send_put(self.client, preference_value)
         response = self.send_get(self.client)
-        self.assertEqual(preference_value, response.data)
+        self.assertEqual(unicode(preference_value), response.data)
 
     @ddt.data(
         ("different_client", "different_user"),
@@ -387,11 +400,12 @@ class TestPreferencesDetailAPI(UserAPITestCase):
 
     def test_update_preference_to_null(self):
         """
-        Test that a client (logged in) cannot set a preference to null.
+        Test that a client (logged in) cannot update a preference to null.
         """
         self.client.login(username=self.user.username, password=self.test_password)
-        self.send_put(self.client, None)
-        self.send_get(self.client, expected_status=400)
+        self.send_put(self.client, None, expected_status=400)
+        response = self.send_get(self.client)
+        self.assertEqual(self.test_pref_value, response.data)
 
     def test_delete_preference(self):
         """

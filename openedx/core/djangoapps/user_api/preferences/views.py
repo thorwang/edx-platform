@@ -13,7 +13,7 @@ from rest_framework import permissions
 from django.utils.translation import ugettext as _
 
 from openedx.core.lib.api.parsers import MergePatchParser
-from ..errors import UserNotFound, UserNotAuthorized, PreferenceValidationError
+from ..errors import UserNotFound, UserNotAuthorized, PreferenceValidationError, PreferenceUpdateError
 from .api import (
     get_user_preference, get_user_preferences, set_user_preference, update_user_preferences, delete_user_preference
 )
@@ -83,11 +83,12 @@ class PreferencesView(APIView):
         except (UserNotFound, UserNotAuthorized):
             return Response(status=status.HTTP_404_NOT_FOUND)
         except PreferenceValidationError as error:
-            user_message = _('Invalid patch request')
+            return Response({"field_errors": error.preference_errors}, status=status.HTTP_400_BAD_REQUEST)
+        except PreferenceUpdateError as error:
             return Response(
                 {
-                    "developer_message": user_message,
-                    "user_message": user_message
+                    "developer_message": error.developer_message,
+                    "user_message": error.user_message
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -155,6 +156,9 @@ class PreferencesDetailView(APIView):
         except (UserNotFound, UserNotAuthorized):
             return Response(status=status.HTTP_404_NOT_FOUND)
         except PreferenceValidationError as error:
+            developer_message = error.preference_errors[preference_key]["developer_message"]
+            return Response(developer_message, status=status.HTTP_400_BAD_REQUEST)
+        except PreferenceUpdateError as error:
             return Response(
                 {
                     "developer_message": error.developer_message,
@@ -172,7 +176,15 @@ class PreferencesDetailView(APIView):
             preference_existed = delete_user_preference(request.user, preference_key, username=username)
         except (UserNotFound, UserNotAuthorized):
             return Response(status=status.HTTP_404_NOT_FOUND)
-        
+        except PreferenceUpdateError as error:
+            return Response(
+                {
+                    "developer_message": error.developer_message,
+                    "user_message": error.user_message
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if not preference_existed:
             return Response(status=status.HTTP_404_NOT_FOUND)
         

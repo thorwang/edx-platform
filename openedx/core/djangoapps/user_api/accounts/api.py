@@ -54,6 +54,7 @@ def get_account_settings(requesting_user, username=None, configuration=None, vie
     Raises:
          AccountUserNotFound: no user with username `username` exists (or `requesting_user.username` if
             `username` is not specified)
+         UserAPIInternalError: the operation failed due to an unexpected error.
     """
     if username is None:
         username = requesting_user.username
@@ -119,7 +120,7 @@ def update_account_settings(requesting_user, update, username=None):
             time, some parts of the update may have been successful, even if an AccountUpdateError is returned;
             in particular, the user account (not including e-mail address) may have successfully been updated,
             but then the e-mail change request, which is processed last, may throw an error.
-
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     if username is None:
         username = requesting_user.username
@@ -286,7 +287,7 @@ def create_account(username, password, email):
         AccountUsernameInvalid
         AccountEmailInvalid
         AccountPasswordInvalid
-
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     # Validate the username, password, and email
     # This will raise an exception if any of these are not in a valid format.
@@ -355,7 +356,7 @@ def activate_account(activation_key):
 
     Raises:
         UserNotAuthorized
-
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     try:
         registration = Registration.objects.get(activation_key=activation_key)
@@ -383,7 +384,7 @@ def request_password_change(email, orig_host, is_secure):
     Raises:
         AccountUserNotFound
         AccountRequestError
-
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     # Binding data to a form requires that the data be passed as a dictionary
     # to the Form class constructor.

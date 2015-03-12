@@ -17,10 +17,10 @@ from student.models import UserProfile
 
 from ..errors import (
     UserAPIInternalError, UserAPIRequestError, UserNotFound, UserNotAuthorized,
-    PreferenceNotFound, PreferenceRequestError, PreferenceValidationError, PreferenceUpdateError
+    PreferenceNotFound, PreferenceValidationError, PreferenceUpdateError
 )
 from ..helpers import intercept_errors
-from ..models import UserOrgTag, UserPreference, PreferenceNotFound
+from ..models import UserOrgTag, UserPreference
 from ..serializers import UserSerializer, RawUserPreferenceSerializer
 
 log = logging.getLogger(__name__)
@@ -38,13 +38,14 @@ def get_user_preference(requesting_user, preference_key, username=None):
             `requesting_user.username` is assumed.
 
     Returns:
-         The value for the user preference. If no preference exists with key `preference_key`, returns
-         None.
+         The value for the user preference which is always a string. If no preference exists
+         with key `preference_key`, returns None.
 
     Raises:
          UserNotFound: no user with username `username` exists (or `requesting_user.username` if
             `username` is not specified)
          UserNotAuthorized: the requesting_user does not have access to the user preference.
+         UserAPIInternalError: the operation failed due to an unexpected error.
     """
     existing_user = _get_user(requesting_user, username, allow_staff=True)
     return UserPreference.get_preference(existing_user, preference_key)
@@ -67,6 +68,7 @@ def get_user_preferences(requesting_user, username=None):
          UserNotFound: no user with username `username` exists (or `requesting_user.username` if
             `username` is not specified)
          UserNotAuthorized: the requesting_user does not have access to the user preference.
+         UserAPIInternalError: the operation failed due to an unexpected error.
     """
     existing_user = _get_user(requesting_user, username, allow_staff=True)
     user_serializer = UserSerializer(existing_user)
@@ -85,8 +87,10 @@ def update_user_preferences(requesting_user, update, username=None):
     Arguments:
         requesting_user (User): The user requesting to modify account information. Only the user with username
             'username' has permissions to modify account information.
-        update (dict): The updated account field values. Note that null values for a preference will
-            be treated as a request to delete the key in question.
+        update (dict): The updated account field values.
+            Some notes:
+                Values are expected to be strings. Non-string values will be converted to strings.
+                Null values for a preference will be treated as a request to delete the key in question.
         username (string): Optional username specifying which account should be updated. If not specified,
             `requesting_user.username` is assumed.
 
@@ -96,7 +100,8 @@ def update_user_preferences(requesting_user, update, username=None):
         UserNotAuthorized: the requesting_user does not have access to change the account
             associated with `username`
         PreferenceValidationError: the update was not attempted because validation errors were found
-        PreferenceUpdateError: the update could not be completed.
+        PreferenceUpdateError: the operation failed when performing the update.
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     existing_user = _get_user(requesting_user, username)
 
@@ -108,18 +113,22 @@ def update_user_preferences(requesting_user, update, username=None):
             try:
                 _validate_user_preference(existing_user, preference_key, preference_key)
             except PreferenceValidationError as error:
+                developer_message = error.preference_errors[preference_key]["developer_message"]
                 errors[preference_key] = {
-                    "developer_message": error.errors
+                    "developer_message": developer_message
                 }
     if errors:
         raise PreferenceValidationError(errors)
     # Then perform the patch
-    for preference_key in update.keys():
-        preference_value = update[preference_key]
-        if preference_value is not None:
-            UserPreference.set_preference(existing_user, preference_key, preference_value)
-        else:
-            UserPreference.delete_preference(existing_user, preference_key)
+    try:
+        for preference_key in update.keys():
+            preference_value = update[preference_key]
+            if preference_value is not None:
+                UserPreference.set_preference(existing_user, preference_key, preference_value)
+            else:
+                UserPreference.delete_preference(existing_user, preference_key)
+    except Exception as error:
+        raise PreferenceUpdateError(error.message)
 
 
 @intercept_errors(UserAPIInternalError, ignore_errors=[UserAPIRequestError])
@@ -145,7 +154,8 @@ def set_user_preference(requesting_user, preference_key, preference_value, usern
         UserNotAuthorized: the requesting_user does not have access to change the account
             associated with `username`
         PreferenceValidationError: the update was not attempted because validation errors were found
-        PreferenceUpdateError: the update could not be completed.
+        PreferenceUpdateError: the operation failed when performing the update.
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     existing_user = _get_user(requesting_user, username)
     if preference_value is None or preference_value == '':
@@ -154,7 +164,10 @@ def set_user_preference(requesting_user, preference_key, preference_value, usern
         )
         raise PreferenceUpdateError(message, user_message=message)
     _validate_user_preference(existing_user, preference_key, preference_key)
-    UserPreference.set_preference(existing_user, preference_key, preference_value)
+    try:
+        UserPreference.set_preference(existing_user, preference_key, preference_value)
+    except Exception as error:
+        raise PreferenceUpdateError(error.message)
 
 
 @intercept_errors(UserAPIInternalError, ignore_errors=[UserAPIRequestError])
@@ -181,12 +194,16 @@ def delete_user_preference(requesting_user, preference_key, username=None):
             `username` is not specified)
         UserNotAuthorized: the requesting_user does not have access to change the account
             associated with `username`
+        PreferenceUpdateError: the operation failed when performing the update.
+        UserAPIInternalError: the operation failed due to an unexpected error.
     """
     existing_user = _get_user(requesting_user, username)
     try:
         UserPreference.delete_preference(existing_user, preference_key)
     except PreferenceNotFound:
         return False
+    except Exception as error:
+        raise PreferenceUpdateError(error.message)
     return True
 
 
@@ -287,6 +304,14 @@ def _get_user(requesting_user, username=None, allow_staff=False):
 
 def _validate_user_preference(user, preference_key, preference_value):
     """Helper method to ensure that a user preference is valid.
+
+    Arguments:
+        user (User): The user whose preference is being validated.
+        preference_key (string): The key for the user preference.
+        preference_value (string): The value to be stored.
+
+    Raises:
+        PreferenceValidationError: the supplied key and/or value for a user preference are invalid.
     """
     try:
         user_preference = UserPreference.objects.get(user=user, key=preference_key)
@@ -302,4 +327,7 @@ def _validate_user_preference(user, preference_key, preference_value):
     else:
         serializer = RawUserPreferenceSerializer(data=new_data)
     if not serializer.is_valid():
-        raise PreferenceValidationError(serializer.errors)
+        error_message = "The user preference has the following errors: {errors}".format(errors=serializer.errors)
+        raise PreferenceValidationError({
+            preference_key: { "developer_message": error_message }
+        })

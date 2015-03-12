@@ -33,14 +33,14 @@ class UserPreference(models.Model):
         Arguments:
             user (User): The user whose preference should be set.
             preference_key (string): The key for the user preference.
-            preference_value (object): The value to be stored.
+            preference_value (string): The value to be stored. Non-strings can
+                be passed and will be converted to strings.
 
         Raises:
-            ValidationError: the update was rejected because it was invalid
+            IntegrityError: the update causes a database integrity error.
         """
         user_preference, _ = cls.objects.get_or_create(user=user, key=preference_key)
         user_preference.value = preference_value
-        user_preference.full_clean()
         user_preference.save()
 
     @classmethod
