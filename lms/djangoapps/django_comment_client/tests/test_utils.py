@@ -178,15 +178,12 @@ class CategoryMapTestCase(ModuleStoreTestCase):
             **kwargs
         )
 
-    def assert_map_with_always_cohort_flag(self, expected):
+    def assert_category_map_equals(self, expected, ignore_always_cohort_inline_discussions=False):
+        """
+        Asserts the expected map with the map returned by get_discussion_category_map method.
+        """
         self.assertEqual(
-            utils.get_discussion_category_map(self.course, ignore_always_cohort_inline_discussions=True),
-            expected
-        )
-
-    def assertCategoryMapEquals(self, expected):
-        self.assertEqual(
-            utils.get_discussion_category_map(self.course),
+            utils.get_discussion_category_map(self.course, ignore_always_cohort_inline_discussions),
             expected
         )
 
@@ -204,7 +201,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         }
 
         def check_cohorted_topics(expected_ids):
-            self.assertCategoryMapEquals(
+            self.assert_category_map_equals(
                 {
                     "entries": {
                         "Topic A": {"id": "Topic_A", "sort_key": "Topic A", "is_cohorted": "Topic_A" in expected_ids},
@@ -251,7 +248,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
 
     def test_single_inline(self):
         self.create_discussion("Chapter", "Discussion")
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
@@ -275,7 +272,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter", "Discussion")
         set_course_cohort_settings(course_key=self.course.id, is_cohorted=True)
 
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
@@ -299,7 +296,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter", "Discussion")
         set_course_cohort_settings(course_key=self.course.id, is_cohorted=True, always_cohort_inline_discussions=False)
 
-        self.assert_map_with_always_cohort_flag(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
@@ -316,7 +313,8 @@ class CategoryMapTestCase(ModuleStoreTestCase):
                     }
                 },
                 "children": ["Chapter"]
-            }
+            },
+            ignore_always_cohort_inline_discussions=True
         )
 
     def test_tree(self):
@@ -329,7 +327,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
 
         def check_cohorted(is_cohorted):
 
-            self.assertCategoryMapEquals(
+            self.assert_category_map_equals(
                 {
                     "entries": {},
                     "subcategories": {
@@ -432,7 +430,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter 2 / Section 1 / Subsection 2", "Discussion", start=later)
         self.create_discussion("Chapter 3 / Section 1", "Discussion", start=later)
 
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
@@ -470,7 +468,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter", "Discussion 4", sort_key="C")
         self.create_discussion("Chapter", "Discussion 5", sort_key="B")
 
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
@@ -522,7 +520,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
             "Topic B": {"id": "Topic_B", "sort_key": "C"},
             "Topic C": {"id": "Topic_C", "sort_key": "A"}
         }
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {
                     "Topic A": {"id": "Topic_A", "sort_key": "B", "is_cohorted": False},
@@ -543,7 +541,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter", "Discussion C")
         self.create_discussion("Chapter", "Discussion B")
 
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
@@ -596,7 +594,7 @@ class CategoryMapTestCase(ModuleStoreTestCase):
         self.create_discussion("Chapter B", "Discussion 1")
         self.create_discussion("Chapter A", "Discussion 2")
 
-        self.assertCategoryMapEquals(
+        self.assert_category_map_equals(
             {
                 "entries": {},
                 "subcategories": {
