@@ -811,13 +811,13 @@ class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
 
     def test_toggle_inline_discussion_topics(self):
         """
-        Scenario: cohort a course-wide discussion.
+        Scenario: select all child checkboxes for inline discussion.
 
         Given I have a course with a cohort defined,
-        And a course-wide discussion with disabled Save button.
-        When I view the course-wide discussion topics in
-        the LMS instructor dashboard
-        There is a link to show me the discussion topics.
+        And a inline discussion with disabled Save button.
+        When I click on child topics
+        Then I see enabled saved button
+        Then I see parent category to be checked.
         """
         self.cohort_discussion_topics_are_visible()
 
@@ -832,7 +832,6 @@ class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
 
         # verify that category is selected.
         self.assertTrue(self.cohort_management_page.is_category_selected())
-        self.save_and_verify_discussion_topics(self.inline_key)
 
 
 @attr('shard_3')

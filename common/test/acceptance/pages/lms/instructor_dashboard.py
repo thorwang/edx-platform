@@ -564,7 +564,7 @@ class CohortManagementSection(PageObject):
 
     def cohort_management_controls_visible(self):
         """
-        Returns the visibility of discussion topics.
+        Return the visibility status of cohort management controls(cohort selector section etc).
         """
         return (self.q(css=self._bounded_selector('.cohort-management-nav')).visible and
                 self.q(css=self._bounded_selector('.wrapper-cohort-supplemental')).visible)
