@@ -462,7 +462,7 @@ def cohort_discussion_topics(request, course_key_string):
     course = get_course_with_access(request.user, 'staff', course_key)
 
     discussion_topics = {}
-    discussion_category_map = get_discussion_category_map(course, cohort_inline_discussion=True)
+    discussion_category_map = get_discussion_category_map(course, ignore_always_cohort_inline_discussions=True)
 
     # We extract the data for the course wide discussions from the category map.
     course_wide_entries = discussion_category_map.pop('entries')

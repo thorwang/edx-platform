@@ -178,6 +178,12 @@ class CategoryMapTestCase(ModuleStoreTestCase):
             **kwargs
         )
 
+    def assert_category_map_with_ignore_always_cohort_flag(self, expected):
+        self.assertEqual(
+            utils.get_discussion_category_map(self.course, ignore_always_cohort_inline_discussions=True),
+            expected
+        )
+
     def assertCategoryMapEquals(self, expected):
         self.assertEqual(
             utils.get_discussion_category_map(self.course),
@@ -246,6 +252,54 @@ class CategoryMapTestCase(ModuleStoreTestCase):
     def test_single_inline(self):
         self.create_discussion("Chapter", "Discussion")
         self.assertCategoryMapEquals(
+            {
+                "entries": {},
+                "subcategories": {
+                    "Chapter": {
+                        "entries": {
+                            "Discussion": {
+                                "id": "discussion1",
+                                "sort_key": None,
+                                "is_cohorted": False,
+                            }
+                        },
+                        "subcategories": {},
+                        "children": ["Discussion"]
+                    }
+                },
+                "children": ["Chapter"]
+            }
+        )
+
+    def test_inline_with_always_cohort_inline_discussion_flag(self):
+        self.create_discussion("Chapter", "Discussion")
+        set_course_cohort_settings(course_key=self.course.id, is_cohorted=True)
+
+        self.assertCategoryMapEquals(
+            {
+                "entries": {},
+                "subcategories": {
+                    "Chapter": {
+                        "entries": {
+                            "Discussion": {
+                                "id": "discussion1",
+                                "sort_key": None,
+                                "is_cohorted": True,
+                            }
+                        },
+                        "subcategories": {},
+                        "children": ["Discussion"]
+                    }
+                },
+                "children": ["Chapter"]
+            }
+        )
+
+    def test_inline_without_always_cohort_inline_discussion_flag(self):
+        self.create_discussion("Chapter", "Discussion")
+        set_course_cohort_settings(course_key=self.course.id, is_cohorted=True, always_cohort_inline_discussions=False)
+
+        self.assert_category_map_with_ignore_always_cohort_flag(
             {
                 "entries": {},
                 "subcategories": {

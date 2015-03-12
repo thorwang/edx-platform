@@ -6,7 +6,6 @@ End-to-end tests related to the cohort management on the LMS Instructor Dashboar
 from datetime import datetime
 
 from pymongo import MongoClient
-import uuid
 
 from pytz import UTC, utc
 from bok_choy.promise import EmptyPromise
@@ -20,6 +19,7 @@ from ...pages.lms.instructor_dashboard import InstructorDashboardPage, DataDownl
 from ...pages.studio.settings_advanced import AdvancedSettingsPage
 from ...pages.studio.settings_group_configurations import GroupConfigurationsPage
 
+import uuid
 
 
 @attr('shard_3')
@@ -642,7 +642,7 @@ class CohortConfigurationTest(UniqueCourseTest, CohortTestMixin):
 @attr('shard_3')
 class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
     """
-    Tests for cohort the course-wide and inline discussion topics.
+    Tests for cohorting the inline and course-wide discussion topics.
     """
     def setUp(self):
         """
@@ -681,20 +681,135 @@ class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
         self.instructor_dashboard_page = InstructorDashboardPage(self.browser, self.course_id)
         self.instructor_dashboard_page.visit()
         self.cohort_management_page = self.instructor_dashboard_page.select_cohort_management()
+        self.cohort_management_page.wait_for_page()
 
-    def test_cohort_discussion_topics_are_available(self):
+        self.course_wide_key = 'course-wide'
+        self.inline_key = 'inline'
+
+    def cohort_discussion_topics_are_visible(self):
         """
-        Scenario: a link and list of discussion topics is present in management tab.
-
-        Given I have a course with a cohort defined
-        When I view the cohort in the LMS instructor dashboard
-        There is a link to show me the discussion topics, clicking
-        on link shows me a list.
+        Assert that discussion topics are visible with appropriate content.
         """
         self.cohort_management_page.toggle_discussion_topics()
         self.assertTrue(self.cohort_management_page.discussion_topics_visible())
 
+        self.assertEqual(
+            "Course-Wide Discussion Topics",
+            self.cohort_management_page.cohort_discussion_heading_is_visible(self.course_wide_key)
+        )
+        self.assertTrue(self.cohort_management_page.is_save_button_disabled(self.course_wide_key))
+
+        self.assertEqual(
+            "Content-Specific Discussion Topics",
+            self.cohort_management_page.cohort_discussion_heading_is_visible(self.inline_key)
+        )
+        self.assertTrue(self.cohort_management_page.is_save_button_disabled(self.inline_key))
+
+    def save_and_verify_discussion_topics(self, key):
+        """
+        Saves the discussion topics and the verify the changes.
+        """
+        # click on the inline save button.
+        self.cohort_management_page.save_discussion_topics(key)
+
+        # verifies that changes saved successfully.
+        confirmation_message = self.cohort_management_page.get_cohort_discussions_message(key=key)
+        self.assertEqual("Changes Saved.", confirmation_message)
+
+        # save button disabled again.
+        self.assertTrue(self.cohort_management_page.is_save_button_disabled(key))
+
     def test_cohort_course_wide_discussion_topic(self):
+        """
+        Scenario: cohort a course-wide discussion topic.
+
+        Given I have a course with a cohort defined,
+        And a course-wide discussion with disabled Save button.
+        When I click on the course-wide discussion topic
+        Then I see the enabled save button
+        When I click on save button
+        Then I see success message.
+        """
+        self.cohort_discussion_topics_are_visible()
+
+        cohorted_topics_before = self.cohort_management_page.get_cohorted_topics_count(self.course_wide_key)
+        self.cohort_management_page.select_discussion_topic(self.course_wide_key)
+
+        self.assertFalse(self.cohort_management_page.is_save_button_disabled(self.course_wide_key))
+
+        self.save_and_verify_discussion_topics(key=self.course_wide_key)
+        cohorted_topics_after = self.cohort_management_page.get_cohorted_topics_count(self.course_wide_key)
+
+        self.assertNotEqual(cohorted_topics_before, cohorted_topics_after)
+
+    def test_always_cohort_inline_topic_enabled(self):
+        """
+        Scenario: Select the always_cohort_inline_topics radio button
+
+        Given I have a course with a cohort defined,
+        And a inline discussion topic with disabled Save button.
+        When I click on always_cohort_inline_topics
+        Then I see enabled save button
+        And I see disabled inline discussion topics.
+        """
+        self.cohort_discussion_topics_are_visible()
+
+        # enable always inline discussion topics.
+        self.cohort_management_page.select_always_inline_discussion()
+
+        self.assertTrue(self.cohort_management_page.inline_discussion_topics_disabled())
+
+    def test_cohort_some_inline_topics_enabled(self):
+        """
+        Scenario: Select the cohort_some_inline_topics radio button
+
+        Given I have a course with a cohort defined,
+        And a inline discussion topic with disabled Save button.
+        When I click on cohort_some_inline_topics
+        Then I see enabled save button
+        And I see enabled inline discussion topics.
+        """
+        self.cohort_discussion_topics_are_visible()
+
+        # enable some inline discussion topic radio button.
+        self.cohort_management_page.select_cohort_some_inline_discussion()
+        # I see that save button is enabled
+        self.assertFalse(self.cohort_management_page.is_save_button_disabled(self.inline_key))
+        # I see that inline discussion topics are enabled
+        self.assertFalse(self.cohort_management_page.inline_discussion_topics_disabled())
+
+    def test_cohort_inline_discussion_topic(self):
+        """
+        Scenario: cohort inline discussion topic.
+
+        Given I have a course with a cohort defined,
+        And a inline discussion topic with disabled Save button.
+        When I click on cohort_some_inline_discussion_topics
+        Then I see enabled saved button
+        And When I click on inline discussion topic
+        And I see enabled save button
+        And When i click save button
+        Then I see success message.
+        """
+        self.cohort_discussion_topics_are_visible()
+
+        # select some inline discussion topics radio button.
+        self.cohort_management_page.select_cohort_some_inline_discussion()
+
+        cohorted_topics_before = self.cohort_management_page.get_cohorted_topics_count(self.inline_key)
+        # check the discussion topic.
+        self.cohort_management_page.select_discussion_topic(self.inline_key)
+
+        # Save button enabled.
+        self.assertFalse(self.cohort_management_page.is_save_button_disabled(self.inline_key))
+
+        # verifies that changes saved successfully.
+        self.save_and_verify_discussion_topics(key=self.inline_key)
+
+        cohorted_topics_after = self.cohort_management_page.get_cohorted_topics_count(self.inline_key)
+        self.assertNotEqual(cohorted_topics_before, cohorted_topics_after)
+
+    def test_toggle_inline_discussion_topics(self):
         """
         Scenario: cohort a course-wide discussion.
 
@@ -704,23 +819,20 @@ class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
         the LMS instructor dashboard
         There is a link to show me the discussion topics.
         """
-        self.cohort_management_page.toggle_discussion_topics()
-        self.assertTrue(self.cohort_management_page.discussion_topics_visible())
+        self.cohort_discussion_topics_are_visible()
 
-        self.assertTrue(self.cohort_management_page.is_save_button_disabled('course_wide'))
+        # enable some inline discussion topics.
+        self.cohort_management_page.select_cohort_some_inline_discussion()
 
-        self.cohort_management_page.select_course_wide_discussion()
+        # category should not be selected.
+        self.assertFalse(self.cohort_management_page.is_category_selected())
 
-        self.assertFalse(self.cohort_management_page.is_save_button_disabled('course_wide'))
+        # check the discussion topic.
+        self.cohort_management_page.select_discussion_topic(self.inline_key)
 
-        # click on the save button.
-        self.cohort_management_page.save_discussion_topics('course_wide')
-
-        self._verify_changes_saved()
-
-    def _verify_changes_saved(self):
-        confirmation_message = self.cohort_management_page.get_cohort_discussions_message()
-        self.assertEqual("Changes Saved.", confirmation_message)
+        # verify that category is selected.
+        self.assertTrue(self.cohort_management_page.is_category_selected())
+        self.save_and_verify_discussion_topics(self.inline_key)
 
 
 @attr('shard_3')

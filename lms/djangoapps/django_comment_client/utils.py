@@ -134,9 +134,7 @@ def _sort_map_entries(category_map, sort_alpha):
     category_map["children"] = [x[0] for x in sorted(things, key=lambda x: x[1]["sort_key"])]
 
 
-def get_discussion_category_map(course, cohort_inline_discussion=False):
-    course_id = course.id
-
+def get_discussion_category_map(course, ignore_always_cohort_inline_discussions=False):
     unexpanded_category_map = defaultdict(list)
 
     modules = _get_discussion_modules(course)
@@ -184,15 +182,20 @@ def get_discussion_category_map(course, cohort_inline_discussion=False):
             if node[level]["start_date"] > category_start_date:
                 node[level]["start_date"] = category_start_date
 
+        always_cohort_inline_discussions = (not ignore_always_cohort_inline_discussions and
+                                            course_cohort_settings.always_cohort_inline_discussions)
         for entry in entries:
-            entry_cohorted = (course_cohort_settings.is_cohorted and
-                              entry["id"] in course_cohort_settings.cohorted_discussions)
+            is_entry_cohorted = (
+                course_cohort_settings.is_cohorted and (
+                    always_cohort_inline_discussions or entry["id"] in course_cohort_settings.cohorted_discussions
+                )
+            )
 
             node[level]["entries"][entry["title"]] = {
                 "id": entry["id"],
                 "sort_key": entry["sort_key"],
                 "start_date": entry["start_date"],
-                "is_cohorted": entry_cohorted if cohort_inline_discussion else course_cohort_settings.is_cohorted
+                "is_cohorted": is_entry_cohorted
             }
 
     # TODO.  BUG! : course location is not unique across multiple course runs!
