@@ -78,7 +78,7 @@ def get_account_settings(requesting_user, username=None, configuration=None, vie
     visible_settings = {}
 
     # Calling UserPreference directly because the requesting user may be different from existing_user
-    # (and does not have to be is_staf).
+    # (and does not have to be is_staff).
     profile_privacy = UserPreference.get_preference(existing_user, ACCOUNT_VISIBILITY_PREF_KEY)
     privacy_setting = profile_privacy if profile_privacy else configuration.get('default_visibility')
 
